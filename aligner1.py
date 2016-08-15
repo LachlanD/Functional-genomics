@@ -20,29 +20,31 @@ class Aligner1:
     self.refname = ref.id
     self.refseq = ref.seq
   def align(self, read):
-    reverseSeq = self.refseq.reverse_complement()
     readLength = len(read)
     refLength = len(self.refseq)
     best = 3
     bestPos = 0
     bestStrand = '*'
-    for i in range(refLength-readLength):
-      hamF = 0
-      hamR = 0
-      for j in range(readLength):
-        if read[j] != self.refseq[i+j]:
-          hamF += 1
-        if read[j] != reverseSeq[i+j]:
-          hamR +=1
-      if hamF < best:
-        best = hamF
-        bestPos = i+1 
-        bestStrand = '+'
-      if hamR < best:
-        best = hamR
-        bestPos = i+1
-        bestStrand = '-'
-    if best >= 3:	
+    strand = '+'
+    for r in [read, read.reverse_complement()]:
+      for i in range(refLength-readLength):
+        ham = 0
+        for j in range(readLength):
+          if r[j] != self.refseq[i+j]:
+            ham += 1
+            if ham >= best:
+              break
+          
+        if ham < best:
+          best = ham
+          bestPos = i+1 
+          bestStrand = strand
+        if ham == 0:
+          break
+      
+      strand = '-'  
+
+    if best > 2:	
       alignment = Alignment(read.id, "*", 0, "*", 0)
     else:
       alignment = Alignment(read.id, self.refname, bestPos, bestStrand, best)
