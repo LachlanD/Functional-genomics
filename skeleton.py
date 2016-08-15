@@ -19,6 +19,20 @@ class Aligner1:
   def __init__(self, ref):
     self.refname = ref.id
     self.refseq = ref.seq
+    self.buildKmerDict(13) 
+  def buildKmerDict(self, k):
+    self.dict = {}
+    kmers=[]
+    bases = ['A','C','G','T']
+    for i in range(len(bases)**k):
+      kmer = ''
+      for j in range(k):
+        kmer += bases[i%j]
+      kmers.append(kmer)
+      
+    print(kmers)
+
+      
   def align(self, read):
     readLength = len(read)
     refLength = len(self.refseq)
