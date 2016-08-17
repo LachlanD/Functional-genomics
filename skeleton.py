@@ -27,11 +27,12 @@ class Aligner1:
     for i in range(len(self.refseq)-k):
       kmer = self.refseq[i:i+k]
       if (kmer not in kmers):
-        kmers[kmer] = 1
+        kmers[kmer] = [i]
       else:
-        kmers[kmer] += 1
+        kmers[kmer].append(i)
       
-      
+    print(kmers.values())
+
     return kmers
 
   def align(self, read):
