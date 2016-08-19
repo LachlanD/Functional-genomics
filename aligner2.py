@@ -15,7 +15,7 @@ class Alignment:
 			return "\t".join([self.readId, self.chr, str(self.pos), self.strand, str(self.hammingDistance)])
 
 #Support class to execute the handiwork of read alignment to a reference sequence
-class Aligner1:
+class Aligner2:
   def __init__(self, ref, klen=13):
     self.refname = ref.id
     self.refseq = ref.seq
@@ -94,7 +94,9 @@ class Aligner1:
             bestpos = min(i, bestpos)
 
     for pos, run in reverseruns.items():
+      print(str(pos) + ' ' + str(run))
       if run >=s:
+                
         for i in range(pos-1,pos+1):
           hamdist = 0
           for j in range(len(read)):
@@ -110,6 +112,10 @@ class Aligner1:
           
     if best < 3:  
       return Alignment(read.id, self.refname, bestpos+1, beststrand, best)
+          
+    
+    
+    
     return Alignment(read.id,  "*", 0, "*", 0) 
 
 
