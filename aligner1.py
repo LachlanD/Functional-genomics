@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from Bio import SeqIO
 import sys
@@ -53,7 +53,7 @@ class Aligner1:
 
 #Check the command line arguments
 if len(sys.argv) < 3:
-	print("Usage: <reference file (fasta)> <read file (fasta)> ")
+	print "Usage: <reference file (fasta)> <read file (fasta)> " 
 	sys.exit(0)
 
 
@@ -64,8 +64,8 @@ try:
     aligner = Aligner1(s)
     break #Stop after the fist sequence in the reference
 except IOError as e:
-  print("Could not read reference sequence file (see below)!")
-  print(e)
+  print "Could not read reference sequence file (see below)!"
+  print e
   sys.exit(1)
 
 
@@ -76,7 +76,7 @@ try:
     alignment = aligner.align(read) 
     print(str(alignment))
 except IOError as e:
-  print("Could not read fastq input file (see below)!")
-  print(e)
+  print "Could not read fastq input file (see below)!" 
+  print e 
   sys.exit(1)
 

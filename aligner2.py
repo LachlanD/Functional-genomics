@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from Bio import SeqIO
 import sys
@@ -21,32 +21,27 @@ class Aligner2:
     self.refseq = ref.seq
     self.kmerlength = klen
     self.dictionary = self.buildKmerDict() 
+  
   def buildKmerDict(self):
     
     kmers = {}
     
-    for i in range(len(self.refseq)-self.kmerlength+1):
+    for i in xrange(len(self.refseq)-self.kmerlength+1):
       kmer = self.refseq[i:i+self.kmerlength]
       if (kmer not in kmers):
         kmers[kmer] = [i]
       else:
         kmers[kmer].append(i)
       
-    #print(kmers)
-
     return kmers
 
   def align(self, read):
-    #print(read.seq)
-    #print(self.dictionary)
     matches = []
-    for i in range(len(read)-self.kmerlength+1):
+    readlength = len(read)
+    for i in xrange(readlength-self.kmerlength+1):
       matches.append(self.dictionary.get(read.seq[i:i+self.kmerlength],[]))
-
-    #print(matches)
-
     runs = {}
-    for m in range(len(matches)):
+    for m in xrange(len(matches)):
       for a in matches[m]:
         i = 1
         while m+i < len(matches) and a+i in matches[m+i]:
@@ -55,11 +50,11 @@ class Aligner2:
 
         runs[a]  = i
 
-    for i in range(len(read)-self.kmerlength+1):
+    for i in xrange(len(read)-self.kmerlength+1):
       matches.append(self.dictionary.get(read.seq.reverse_complement()[i:i+self.kmerlength],[]))
 
     reverseruns = {}
-    for m in range(len(matches)):
+    for m in xrange(len(matches)):
       for a in matches[m]:
         i = 1
         while m+i < len(matches) and a+i in matches[m+i]:
@@ -68,19 +63,21 @@ class Aligner2:
 
         reverseruns[a]  = i
 
-    #print(runs)
-    #print(reverseruns)  
 
-    #the length of the second best run
-    if len(runs)+len(reverseruns) > 0:
-      s =  sorted(list(runs.values()) + list(reverseruns.values()))[max(-1*len(runs),-2)]
+    #seed the forward stand with any run equal to the best forward run length
+    if len(runs) > 0:
+      forwardseed =  max(list(runs.values()))
+    
+    #seed the backward strand with any run equal to the best reverse run length
+    if len(reverseruns) > 0:
+      backwardseed = max(list(reverseruns.values()))
     
     best = 3
     bestpos = 0
     beststrand = '*'
-    for pos, run in runs.items():
-      if run >=s:        
-        for i in range(pos-(len(read)-self.kmerlength),min(pos+1, len(self.refseq)-len(read))):
+    for pos, run in runs.iteritems():
+      if run >=forwardseed:        
+        for i in xrange(max(0,pos-(len(read)-self.kmerlength)),min(pos+1, len(self.refseq)-len(read))):
           hamdist = 0
           for j in range(len(read)):
             if read.seq[j] != self.refseq[i+j]:
@@ -93,11 +90,11 @@ class Aligner2:
           if hamdist == best:
             bestpos = min(i, bestpos)
 
-    for pos, run in reverseruns.items():
+    for pos, run in reverseruns.iteritems():
       #print(str(pos) + ' ' + str(run))
-      if run >=s:
+      if run >=backwardseed:
                 
-        for i in range(pos-(len(read)-self.kmerlength),min(pos+1, len(self.refseq) - len(read))):
+        for i in xrange(max(0,pos-(len(read)-self.kmerlength)),min(pos+1, len(self.refseq) - len(read))):
           hamdist = 0
           for j in range(len(read)):
             if read.reverse_complement().seq[j] != self.refseq[i+j]:
@@ -121,7 +118,7 @@ class Aligner2:
 
 #Check the command line arguments
 if len(sys.argv) < 3:
-	print("Usage: <reference file (fasta)> <read file (fasta)> ")
+	print "Usage: <reference file (fasta)> <read file (fasta)> "
 	sys.exit(0)
 
 
@@ -135,8 +132,8 @@ try:
       aligner = Aligner2(s)
     break #Stop after the fist sequence in the reference
 except IOError as e:
-  print("Could not read reference sequence file (see below)!")
-  print(e)
+  print "Could not read reference sequence file (see below)!"
+  print e
   sys.exit(1)
 
 
@@ -147,7 +144,7 @@ try:
     alignment = aligner.align(read) 
     print(str(alignment))
 except IOError as e:
-  print("Could not read fastq input file (see below)!")
-  print(e)
+  print "Could not read fastq input file (see below)!"
+  print e
   sys.exit(1)
 
