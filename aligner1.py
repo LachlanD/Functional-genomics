@@ -2,6 +2,9 @@
 
 from Bio import SeqIO
 import sys
+import time
+
+before = time.time()
 
 #Support Class to create alignments and check relationships between alignments
 class Alignment:
@@ -26,10 +29,10 @@ class Aligner1:
     bestPos = 0
     bestStrand = '*'
     strand = '+'
-    for r in [read, read.reverse_complement()]:
-      for i in range(refLength-readLength):
+    for r in [read.upper(), read.reverse_complement().upper()]:
+      for i in xrange(refLength-readLength):
         ham = 0
-        for j in range(readLength):
+        for j in xrange(readLength):
           if r[j] != self.refseq[i+j]:
             ham += 1
             if ham >= best:
@@ -80,3 +83,6 @@ except IOError as e:
   print e 
   sys.exit(1)
 
+after = time.time()
+
+print "\nruntime " + str(after-before)
