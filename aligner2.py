@@ -68,11 +68,11 @@ class Aligner2:
 
         reverseruns[a]  = i
 
-    print(runs)
-    print(reverseruns)  
+    #print(runs)
+    #print(reverseruns)  
 
     #the length of the second best run
-    if len(runs) > 0:
+    if len(runs)+len(reverseruns) > 0:
       s =  sorted(list(runs.values()) + list(reverseruns.values()))[max(-1*len(runs),-2)]
     
     best = 3
@@ -80,7 +80,7 @@ class Aligner2:
     beststrand = '*'
     for pos, run in runs.items():
       if run >=s:        
-        for i in range(pos-1,pos+1):
+        for i in range(pos-(len(read)-self.kmerlength),min(pos+1, len(self.refseq)-len(read))):
           hamdist = 0
           for j in range(len(read)):
             if read.seq[j] != self.refseq[i+j]:
@@ -94,10 +94,10 @@ class Aligner2:
             bestpos = min(i, bestpos)
 
     for pos, run in reverseruns.items():
-      print(str(pos) + ' ' + str(run))
+      #print(str(pos) + ' ' + str(run))
       if run >=s:
                 
-        for i in range(pos-1,pos+1):
+        for i in range(pos-(len(read)-self.kmerlength),min(pos+1, len(self.refseq) - len(read))):
           hamdist = 0
           for j in range(len(read)):
             if read.reverse_complement().seq[j] != self.refseq[i+j]:
@@ -130,9 +130,9 @@ try:
   for s in SeqIO.parse(sys.argv[1], "fasta"):
     #print(s)
     if(len(sys.argv)>3):
-      aligner = Aligner1(s, int(sys.argv[3]))
+      aligner = Aligner2(s, int(sys.argv[3]))
     else:
-      aligner = Aligner1(s)
+      aligner = Aligner2(s)
     break #Stop after the fist sequence in the reference
 except IOError as e:
   print("Could not read reference sequence file (see below)!")
