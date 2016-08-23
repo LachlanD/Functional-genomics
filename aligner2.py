@@ -4,7 +4,6 @@ from Bio import SeqIO
 import sys
 import time
 
-before = time.time()
 
 #Support Class to create alignments and check relationships between alignments
 class Alignment:
@@ -23,15 +22,16 @@ class Aligner2:
     self.refname = ref.id
     self.refseq = ref.seq
     self.kmerlength = klen
-    self.dictionary = self.buildKmerDict() 
-
+    self.seqlen = len(self.refseq)
+    self.dictionary = self.buildKmerDict()
+    
 # Builds a dictionary of kmers in the reference  
   def buildKmerDict(self):
     
     kmers = {}
     
     # Slide along the reference string extracting kmers
-    for i in xrange(len(self.refseq)-self.kmerlength+1):
+    for i in xrange(self.seqlen-self.kmerlength+1):
       kmer = self.refseq[i:i+self.kmerlength]
       if (kmer not in kmers):
 	# New kmer
@@ -44,85 +44,90 @@ class Aligner2:
 
 # Method for 
   def align(self, read):
-    matches = []
+    fmatches = []
     readlength = len(read)
     uread = read.seq.upper()
     ureverse = read.seq.reverse_complement().upper()
 
     # extract kmers from the forward read and match them to the reference dictionary
     for i in xrange(readlength-self.kmerlength+1):
-      matches.append(self.dictionary.get(uread[i:i+self.kmerlength],[]))
+      fmatches.append(self.dictionary.get(uread[i:i+self.kmerlength],[]))
 
-    # find the runs in the forward strand by finding consecutive matches
-    runs = {}
-    for m in xrange(len(matches)):
-      for a in matches[m]:
+    # find the best forward run by finding the most consecutive matches
+    bestfrun = 0
+    bestfpos = []
+    for m in xrange(len(fmatches)):
+      for a in fmatches[m]:
         i = 1
-        while m+i < len(matches) and a+i in matches[m+i]:
-          matches[m+i].remove(a+i)
+        while m+i < len(fmatches) and a+i in fmatches[m+i]:
+          fmatches[m+i].remove(a+i)
           i += 1
-        runs[a]  = i
-
+        if i > bestfrun:
+          bestfrun = i
+          bestfpos = [a]
+        elif i == bestfrun:
+          bestfpos.append(a)
+    
+    rmatches = []
     # extract kmers from the reverse read and match them to the reference dictionary 
     for i in xrange(len(read)-self.kmerlength+1):
-      matches.append(self.dictionary.get(ureverse[i:i+self.kmerlength],[]))
+      rmatches.append(self.dictionary.get(ureverse[i:i+self.kmerlength],[]))
 
-    # find runs in the reverse strand by finding consecutive matches
-    reverseruns = {}
-    for m in xrange(len(matches)):
-      for a in matches[m]:
+    # find the best reverse runs by finding the most consecutive matches
+    bestrrun = 0  
+    bestrpos = []
+    for m in xrange(len(rmatches)):
+      for a in rmatches[m]:
         i = 1
-        while m+i < len(matches) and a+i in matches[m+i]:
-          matches[m+i].remove(a+i)
+        while m+i < len(rmatches) and a+i in rmatches[m+i]:
+          rmatches[m+i].remove(a+i)
           i += 1
-        reverseruns[a]  = i
+        if i > bestrrun:
+          bestrrun = i 
+          bestrpos = [a]
+	elif i == bestrrun:
+          bestrpos.append(a)		
 
-    #seed the forward stand with any run equal to the best forward run length
-    if len(runs) > 0:
-      forwardseed =  max(list(runs.values()))
-    
-    #seed the backward strand with any run equal to the best reverse run length
-    if len(reverseruns) > 0:
-      backwardseed = max(list(reverseruns.values()))
-    
     best = 3
     bestpos = 0
     beststrand = '*'
-    # find all the runs with the maximum forward run length and check the hamming distance
-    for pos, run in runs.iteritems():
-      if run >=forwardseed:
-	# Overhang is the readleangth - (the run length + the kmer length)        
-        for i in xrange(max(0,pos-(readlength-self.kmerlength)),min(pos+1, len(self.refseq)-readlength)):
-          hamdist = 0
-          for j in xrange(len(read)):
-            if uread[j] != self.refseq[i+j]:
-              hamdist += 1
-          # update the best hamming distance if a new best is found
-          if hamdist < best:
-            best = hamdist
-            bestpos = i
-            beststrand = '+'
-          # update if an equally good alignment is found at an earlier position
-          if hamdist == best:
-            bestpos = min(i, bestpos)
-    # find all the runs with the maximum backwards run length and check the hamming distance
-    for pos, run in reverseruns.iteritems():
-      if run >=backwardseed:
-	# Overhang is the readleangth - (the run length + the kmer length)                       
-        for i in xrange(max(0,pos-(readlength-self.kmerlength)),min(pos+1, len(self.refseq) - readlength)):
-          hamdist = 0
-          for j in range(len(read)):
-            if ureverse[j] != self.refseq[i+j]:
-              hamdist += 1
-              
-          # update the best hamming distance if a new best is found
-          if hamdist < best:
-            best = hamdist
-            bestpos = i
-            beststrand = '-'
-	  # update if an equally good position is found at an earlier position
-          if hamdist == best and beststrand == '-':
-            bestpos = min(i, bestpos)
+
+    for pos in bestfpos:
+      if best == 0:
+        break
+      # Explore the run from 2 spots before its start until the end of the read overhangs atleast 2 positions or if the read length is longer than the run 2 spots past the run start
+      start = max(0, pos -readlength + bestfrun)
+      end = min(max(pos+2, pos + bestfrun - readlength +2), self.seqlen-readlength)
+      for i in xrange(start, end):
+        hamdist = 0
+        for j in xrange(len(read)):
+          if uread[j] != self.refseq[i+j]:
+            hamdist += 1
+        if hamdist < best:
+          best = hamdist
+          bestpos = i
+          beststrand = '+'
+          
+
+    for pos in bestrpos:
+      # Explore the run from 2 spots before its start until the end of the read overhangs atleast 2 positions or if the read length is longer than the run 2 spots past the run start
+      start = max(0, pos -readlength + bestrrun)
+      end = min(max(pos+2, pos + bestrrun - readlength + 2), self.seqlen-readlength)
+      for i in xrange(start, end):
+        hamdist = 0
+        for j in xrange(len(read)):
+          if ureverse[j] != self.refseq[i+j]:
+            hamdist += 1
+        if hamdist < best:
+          best = hamdist
+          bestpos = i
+          beststrand = '-'
+        # Use this if statement if earlier positions in the reverse strand are reported before the forward strand.  Spec and examples are ambiguous
+        elif hamdist == best and i < bestpos:
+	  bestpos = i
+          beststrand = '-'
+        
+ 
     
     # If the best is less than 3 hamming distance return that      
     if best < 3:  
@@ -130,6 +135,7 @@ class Aligner2:
           
     return Alignment(read.id,  "*", 0, "*", 0) 
 
+before = time.time()
 
 #Check the command line arguments
 if len(sys.argv) < 3:
@@ -151,11 +157,8 @@ except IOError as e:
   print e
   sys.exit(1)
 
-
 #Open the read data and get to work
 try:
-  before = time.time()
-   
   for read in SeqIO.parse(sys.argv[2], "fastq"):
     alignment = aligner.align(read) 
     print(str(alignment))
@@ -167,4 +170,3 @@ except IOError as e:
 after = time.time()
 
 print "\nruntime " + str(after-before)
-

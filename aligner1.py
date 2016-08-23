@@ -28,24 +28,38 @@ class Aligner1:
     best = 3
     bestPos = 0
     bestStrand = '*'
-    strand = '+'
-    for r in [read.upper(), read.reverse_complement().upper()]:
-      for i in xrange(refLength-readLength):
-        ham = 0
-        for j in xrange(readLength):
-          if r[j] != self.refseq[i+j]:
-            ham += 1
-            if ham >= best:
-              break
-          
-        if ham < best:
-          best = ham
-          bestPos = i+1 
-          bestStrand = strand
-        if ham == 0:
-          break
+    uread = read.upper()
+    ureverse = read.reverse_complement().upper()
+    # Note. This implementation will report alignments closer to zero on the reverse strand before later alignments on forward strand spec/examples ambiguous
+    for i in xrange(refLength-readLength+1):
+      # calculate hamming distance on forward strand
+      ham = 0
+      for j in xrange(readLength):
+        if uread[j] != self.refseq[i+j]:
+          ham += 1
+          if ham > best:
+            break
+      if ham < best:
+        best = ham
+        bestPos = i+1 
+        bestStrand = '+'
+
+      # calculate hamming distance on reverse strand
+      ham = 0
+      for j in xrange(readLength):
+        if ureverse[j] != self.refseq[i+j]:
+          ham += 1
+          if ham > best:
+            break
+      if ham < best:
+        best = ham
+        bestPos = i+1 
+        bestStrand = '-'
+      # if we have already found a perfect alignment no need to look further
+      if best == 0:
+        break          
       
-      strand = '-'  
+     
 
     if best > 2:	
       alignment = Alignment(read.id, "*", 0, "*", 0)
@@ -75,7 +89,6 @@ except IOError as e:
 #Open the read data and get to work
 try: 
   for read in SeqIO.parse(sys.argv[2], "fastq"):
-    #print(read)
     alignment = aligner.align(read) 
     print(str(alignment))
 except IOError as e:
